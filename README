@@ -1,5 +1,6 @@
-eventdispatcher is a observer pattern implementation for handling events.
+eventdispatcher is an observer pattern implementation for handling events.
 
 Subscribers can register named callbacks to eventdispatcher. The callbacks
 will be called whenever a 'publisher' dispatches an event.
 
+Please note that eventdispatcher *doesn't* use any channels for communication.
