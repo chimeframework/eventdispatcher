@@ -37,12 +37,12 @@ func (this *testSubscriber2) Print() {
 	fmt.Printf("PASS %v\n", this.id)
 }
 
-func OnFooCallback(receiver EventSubscriber, e *Event) {
+func OnFooCallback(receiver EventSubscriber, e Eventer) {
 	this := receiver.(*testSubscriber)
 	this.Print()
 }
 
-func OnBooCallback(this EventSubscriber, e *Event) {
+func OnBooCallback(this EventSubscriber, e Eventer) {
 }
 
 type testSubscriber2 struct {
@@ -62,12 +62,12 @@ func (this *testSubscriber2) GetSubscribedEvents() EventCallbacks {
 	return this.callbacks
 }
 
-func OnFooCallback2(receiver EventSubscriber, e *Event) {
+func OnFooCallback2(receiver EventSubscriber, e Eventer) {
 	this := receiver.(*testSubscriber2)
 	this.Print()
 }
 
-func OnBooCallback2(this EventSubscriber, e *Event) {
+func OnBooCallback2(this EventSubscriber, e Eventer) {
 }
 
 func TestAddSubscriber(t *testing.T) {
@@ -182,7 +182,7 @@ func (this *testSubscriber3) GetSubscribedEvents() EventCallbacks {
 	return this.callbacks
 }
 
-func OnProp1Callback(receiver EventSubscriber, e *Event) {
+func OnProp1Callback(receiver EventSubscriber, e Eventer) {
 	e.StopPropagation()
 }
 
@@ -192,21 +192,67 @@ type testSubscriber4 struct {
 }
 
 func NewTestSubscriber4() *testSubscriber4 {
-	calls := make(EventCallbacks, 0)
-	calls = append(calls, NewEventCallback("OnProp", OnProp2Callback, 0))
-	return &testSubscriber4{callbacks: calls}
+	return &testSubscriber4{}
 }
 
 func (this *testSubscriber4) GetSubscribedEvents() EventCallbacks {
 	return this.callbacks
 }
-func OnProp2Callback(receiver EventSubscriber, e *Event) {
+func OnProp2Callback(receiver EventSubscriber, e Eventer) {
 	fmt.Printf("FAIL! OnProp2Callback should never be called. OnProp1Callback should have stopped the propagation")
 }
 
 func TestEventPropagation(t *testing.T) {
 	dispatcher := NewEventDispatcher()
-	dispatcher.AddSubscriber(NewTestSubscriber4())
+	sub4 := NewTestSubscriber4()
+	calls := make(EventCallbacks, 0)
+	calls = append(calls, NewEventCallback("OnProp", func(receiver EventSubscriber, e Eventer) {
+		t.Errorf("OnProp2Callback should never be called. OnProp1Callback should have stopped the propagation")
+	}, 0))
+	sub4.callbacks = calls
+
+	dispatcher.AddSubscriber(sub4)
 	dispatcher.AddSubscriber(NewTestSubscriber3())
 	dispatcher.Dispatch("OnProp", NewEvent())
+}
+
+type testSubscriber5 struct {
+	EventSubscriber
+	callbacks EventCallbacks
+}
+
+type CustomEvent struct {
+	Event
+	name string
+	id   int
+}
+
+func NewCustomEvent() *CustomEvent {
+	return &CustomEvent{name: "custom event", id: 123456}
+}
+
+func NewTestSubscriber5() *testSubscriber5 {
+	return &testSubscriber5{}
+}
+
+func (this *testSubscriber5) GetSubscribedEvents() EventCallbacks {
+	return this.callbacks
+}
+
+func TestCustomEvent(t *testing.T) {
+	dispatcher := NewEventDispatcher()
+	sub := NewTestSubscriber5()
+	calls := make(EventCallbacks, 0)
+
+	callback := func(receiver EventSubscriber, e Eventer) {
+		event := e.(*CustomEvent)
+		if event.name != "custom event" {
+			t.Errorf("Expected callback event name 'custom event' got %v\n", event.name)
+		}
+	}
+
+	calls = append(calls, NewEventCallback("OnCustomEventDispatch", callback, 0))
+	sub.callbacks = calls
+	dispatcher.AddSubscriber(sub)
+	dispatcher.Dispatch("OnCustomEventDispatch", NewCustomEvent())
 }

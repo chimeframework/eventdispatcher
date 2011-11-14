@@ -1,3 +1,5 @@
 pkg/
 _obj/
 *.6
+*.out
+_test*

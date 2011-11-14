@@ -39,7 +39,7 @@ func (this *EventDispatcher) AddCallback(call *EventCallback, subscriber EventSu
 // Dispatch calls all the corresponding callbacks which are subscribed to the event as indicated
 // by eventName. The calls are made based on their priority number (0 denotes the lowest priority).
 // The event propagation can be stopped by a subscriber by calling StopPropagation on a passed event.
-func (this *EventDispatcher) Dispatch(eventName string, event *Event) {
+func (this *EventDispatcher) Dispatch(eventName string, event Eventer) {
 	callbacks, ok := this.callbacks[eventName]
 	if !ok {
 		return
@@ -97,6 +97,11 @@ type EventSubscriber interface {
 	GetSubscribedEvents() EventCallbacks
 }
 
+type Eventer interface {
+	IsPropagationStopped() bool
+	StopPropagation()
+}
+
 // Event is a type for a basic Event.
 type Event struct {
 	propagationStopped bool
@@ -121,13 +126,13 @@ func (this *Event) StopPropagation() {
 // a pointer to the subscriber itself.
 type EventCallback struct {
 	name       string
-	call       func(EventSubscriber, *Event)
+	call       func(EventSubscriber, Eventer)
 	priority   int
 	subscriber EventSubscriber
 }
 
 // NewEventCallback returns an instance of EventCallback.
-func NewEventCallback(n string, c func(EventSubscriber, *Event), p int) *EventCallback {
+func NewEventCallback(n string, c func(EventSubscriber, Eventer), p int) *EventCallback {
 	return &EventCallback{name: n, call: c, priority: p}
 }
 
